@@ -1,5 +1,8 @@
 # Sorting Algorithm Comparison
 
+## Update
+I believe the custom algorithm may be a variation of quick sort.
+
 ## Project Overview
 This repository presents a comprehensive comparison between standard sorting algorithms and custom-developed algorithms. The focus is on evaluating and comparing the performance of these algorithms under a variety of conditions and data sets.
 
