@@ -6,7 +6,7 @@ This repository presents a comprehensive comparison between standard sorting alg
 ## Performance Comparison
 Below is a visual representation of the performance comparison of the sorting algorithms:
 
-![Graphs](Figure1.png)
+![](Figure_1.png)
 
 ## Request for Review
 In my analysis, I observed that my custom algorithms appear to outperform the standard algorithms in certain scenarios. I am aware, however, that it is unlikely I have discovered something entirely new in the field of sorting algorithms, which leads me to suspect there may be an oversight in my testing approach.
