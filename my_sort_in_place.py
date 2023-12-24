@@ -1,20 +1,30 @@
-def my_sort_without_space(arr, left=0, right=None, minimum=None, maximum=None):
-    if right is None:
-        right = len(arr) - 1
+def my_sort_in_place(arr):
+    if not arr:
+        return arr
+    my_sort_in_place_util(arr, 0, len(arr) - 1, min(arr), max(arr))
+
+
+def my_sort_in_place_util(arr, left, right, minimum, maximum):
     if left >= right:
         return
-    if minimum is None or maximum is None:
-        minimum, maximum = min(arr), max(arr)
+
     if minimum == maximum:
         return
+
     mid_point = (minimum + maximum) // 2
+
     i, j = left, right
+    left_maximum, right_minimum = minimum, maximum
     while i <= j:
-        if arr[i] > mid_point:
+        if arr[i] <= mid_point:
+            if arr[i] > left_maximum:
+                left_maximum = arr[i]
+            i += 1
+        else:
+            if arr[i] < right_minimum:
+                right_minimum = arr[i]
             arr[i], arr[j] = arr[j], arr[i]
             j -= 1
-        else:
-            i += 1
-    my_sort_without_space(arr, left, i - 1, minimum, mid_point)
-    my_sort_without_space(arr, i, right, mid_point + 1, maximum)
 
+    my_sort_in_place_util(arr, left, i - 1, minimum, left_maximum)
+    my_sort_in_place_util(arr, i, right, right_minimum, maximum)

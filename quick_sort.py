@@ -1,4 +1,3 @@
-import random
 
 
 def quick_sort(arr):
@@ -12,10 +11,9 @@ def quick_sort_helper(arr, low, high):
         quick_sort_helper(arr, pi + 1, high)
 
 
-
 def partition(arr, low, high):
-    pivot_index = random.randint(low, high)  # Choosing a random pivot
-    arr[pivot_index], arr[high] = arr[high], arr[pivot_index]  # Swap with the last element
+    pivot_index = (low + high) // 2
+    arr[pivot_index], arr[high] = arr[high], arr[pivot_index]
 
     pivot = arr[high]
     i = low - 1
@@ -25,4 +23,3 @@ def partition(arr, low, high):
             arr[i], arr[j] = arr[j], arr[i]
     arr[i + 1], arr[high] = arr[high], arr[i + 1]
     return i + 1
-

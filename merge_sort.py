@@ -1,11 +1,11 @@
-def merge_sort_not_in_place(arr):
+def merge_sort(arr):
     if len(arr) > 1:
         mid = len(arr) // 2
         L = arr[:mid]
         R = arr[mid:]
 
-        merge_sort_not_in_place(L)
-        merge_sort_not_in_place(R)
+        merge_sort(L)
+        merge_sort(R)
 
         merge(arr, L, R)
 

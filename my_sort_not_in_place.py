@@ -1,9 +1,12 @@
-def my_sort_with_space(arr, minimum=None, maximum=None):
+def my_sort_not_in_place(arr):
+    if not arr:
+        return arr
+    return my_sort_not_in_place_util(arr, min(arr), max(arr))
+
+
+def my_sort_not_in_place_util(arr, minimum, maximum):
     if len(arr) <= 1:
         return arr
-
-    minimum = min(arr) if minimum is None else minimum
-    maximum = max(arr) if maximum is None else maximum
 
     if minimum == maximum:
         return arr
@@ -11,15 +14,16 @@ def my_sort_with_space(arr, minimum=None, maximum=None):
     mid_point = (minimum + maximum) // 2
 
     left, right = [], []
-    left_maximum = right_minimum = None
+    left_maximum, right_minimum = minimum, maximum
     for ele in arr:
         if ele <= mid_point:
-            if left_maximum is None or ele > left_maximum:
+            if ele > left_maximum:
                 left_maximum = ele
             left.append(ele)
         else:
-            if right_minimum is None or ele < right_minimum:
+            if ele < right_minimum:
                 right_minimum = ele
             right.append(ele)
 
-    return my_sort_with_space(left, minimum, left_maximum) + my_sort_with_space(right, right_minimum, maximum)
+    return (my_sort_not_in_place_util(left, minimum, left_maximum) +
+            my_sort_not_in_place_util(right, right_minimum, maximum))

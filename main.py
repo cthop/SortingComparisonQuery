@@ -1,4 +1,3 @@
-import numpy as np
 import matplotlib.pyplot as plt
 import random
 import time
@@ -12,8 +11,8 @@ from quick_sort import quick_sort
 from shell_sort import shell_sort
 from tim_sort import tim_sort
 from heap_sort import heap_sort
-from my_sort_with_space import my_sort_with_space
-from my_sort_without_space import my_sort_without_space
+from my_sort_not_in_place import my_sort_not_in_place
+from my_sort_in_place import my_sort_in_place
 
 
 class TestData:
@@ -55,7 +54,7 @@ def benchmark_single_algorithm(algo_data):
 def benchmark_sorting_algorithms(sorting_algorithms: List[Callable],
                                  data_generator: TestData,
                                  sizes: List[int],
-                                 repetitions: int = 3) -> dict:
+                                 repetitions: int = 5) -> dict:
     results = {algo.__name__: {'random': [], 'sorted': [], 'reverse_sorted': [], 'many_duplicates': []}
                for algo in sorting_algorithms}
 
@@ -83,7 +82,7 @@ def benchmark_sorting_algorithms(sorting_algorithms: List[Callable],
     return results
 
 
-def calculate_integrals_and_rank(benchmark_results, data_sizes):
+def calculate_integrals(benchmark_results, data_sizes):
     # Calculating the integral for each algorithm and data type
     integral_results = {}
 
@@ -94,30 +93,38 @@ def calculate_integrals_and_rank(benchmark_results, data_sizes):
             integral = simps(benchmark_results[algo][data_type], data_sizes)
             integral_results[algo][data_type] = integral
 
-    # Ranking the algorithms based on the integral (lower is better)
-    ranked_results = {data_type: sorted([(algo, integral_results[algo][data_type])
-                                         for algo in integral_results], key=lambda x: x[1])
-                      for data_type in integral_results[next(iter(integral_results))]}
-
-    return ranked_results
+    return integral_results
 
 
 def visualize_benchmark_results(results: dict,
                                 sizes: List[int],
-                                ranked_results: dict) -> None:
+                                integral_results: dict) -> None:
     fig, axes = plt.subplots(2, 2, figsize=(15, 10))
     axes = axes.flatten()
 
     for idx, data_type in enumerate(['random', 'sorted', 'reverse_sorted', 'many_duplicates']):
         ax = axes[idx]
+        line_label_pairs = []
+
         for algo in results:
-            ax.plot(sizes, results[algo][data_type],
-                    label=f"{algo} (Rank: {next((i + 1 for i, (a, _) in enumerate(ranked_results[data_type]) if a == algo), None)})")
+            integral_score = integral_results[algo][data_type]
+            line, = ax.plot(sizes, results[algo][data_type])
+            label = f"{algo} (Score: {integral_score:.2f})"
+            line_label_pairs.append((line, label, integral_score))
+
+        # Sort the pairs by integral score
+        line_label_pairs.sort(key=lambda x: x[2])
+
+        # Unpack the sorted pairs
+        lines, sorted_labels, *_ = zip(*line_label_pairs)
+
         ax.set_title(f'Time taken by Sorting Algorithms on {data_type.replace("_", " ").title()} Data')
         ax.set_xlabel('Data Size')
         ax.set_ylabel('Time (seconds)')
         ax.grid(True)
-        ax.legend()
+
+        # Create legend with sorted labels and corresponding lines
+        ax.legend(lines, sorted_labels)
 
     plt.tight_layout()
     plt.show()
@@ -125,19 +132,19 @@ def visualize_benchmark_results(results: dict,
 
 def main():
     # Adjustable parameters
-    MIN_DATA_SIZE = 1
-    MAX_DATA_SIZE = 200_000
-    NUM_DATA_POINTS = 40
+    MIN_DATA_SIZE = 0
+    MAX_DATA_SIZE = 250_000
+    NUM_DATA_POINTS = 50
 
     # List of sorting algorithms to benchmark
-    sorting_algorithms = [merge_sort, quick_sort,
-                          shell_sort,
+    sorting_algorithms = [merge_sort,
+                          quick_sort, shell_sort,
                           tim_sort, heap_sort,
-                          my_sort_with_space,
-                          my_sort_without_space]
+                          my_sort_not_in_place,
+                          my_sort_in_place]
 
     # Generating data sizes for benchmarking
-    data_sizes = list(np.linspace(MIN_DATA_SIZE, MAX_DATA_SIZE, num=NUM_DATA_POINTS, dtype=int))
+    data_sizes = list(range(MIN_DATA_SIZE, MAX_DATA_SIZE + 1, MAX_DATA_SIZE // NUM_DATA_POINTS))
 
     # Creating a TestData instance
     test_data_generator = TestData()
@@ -145,11 +152,11 @@ def main():
     # Running the benchmark
     benchmark_results = benchmark_sorting_algorithms(sorting_algorithms, test_data_generator, data_sizes)
 
-    # Calculating integrals and ranking
-    ranked_results = calculate_integrals_and_rank(benchmark_results, data_sizes)
+    # Calculating integrals
+    results = calculate_integrals(benchmark_results, data_sizes)
 
     # Visualizing the results with rankings
-    visualize_benchmark_results(benchmark_results, data_sizes, ranked_results)
+    visualize_benchmark_results(benchmark_results, data_sizes, results)
 
 
 if __name__ == "__main__":
