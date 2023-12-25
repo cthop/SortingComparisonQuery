@@ -144,7 +144,7 @@ def print_and_save_results(results: dict, scores: dict) -> None:
         table_data.sort(key=lambda x: x[5])
 
         table = PrettyTable()
-        table.field_names = ["Algorithm", "Median Time", "Min Time", "Max Time", "Average Std Dev", "Integral Score"]
+        table.field_names = ["Algorithm", "Median Time", "Min Time", "Max Time", "Average Std Dev", "Score"]
 
         for row in table_data:
             adjusted_row = [f"{ele:.6f}" if isinstance(ele, (float, int)) else ele for ele in row]
