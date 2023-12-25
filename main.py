@@ -1,12 +1,13 @@
 import numpy as np
 from matplotlib import pyplot as plt
 from prettytable import PrettyTable
-import random
 import gc
-import math
+import statistics
 from typing import Callable, List
 from scipy.integrate import simps
 from multiprocessing import Pool, cpu_count
+import time
+from test_data import TestData
 
 from merge_sort import merge_sort
 from quick_sort import quick_sort
@@ -17,48 +18,34 @@ from my_sort_not_in_place import my_sort_not_in_place
 from my_sort_in_place import my_sort_in_place
 
 
-class TestData:
-    @staticmethod
-    def random_data(size: int) -> List[int]:
-        return random.sample(range(size * 2), size)
-
-    @staticmethod
-    def sorted_data(size: int) -> List[int]:
-        data = list(range(size))
-        num_swaps = int(size * 0.1)  # 10% of the size
-
-        for _ in range(num_swaps):
-            idx1, idx2 = random.sample(range(size), 2)
-            data[idx1], data[idx2] = data[idx2], data[idx1]
-
-        return data
-
-    @staticmethod
-    def reverse_sorted_data(size: int) -> List[int]:
-        return list(reversed(TestData.sorted_data(size)))
-
-    @staticmethod
-    def many_duplicates_data(size: int) -> List[int]:
-        return [random.choice(range(max(1, size // 20))) for _ in range(size)]
-
-
 def benchmark_single_algorithm(algo_data):
     algo, data, data_type, repetitions = algo_data
-    total_accesses = 0
-    total_comparisons = 0
+    times = []
 
-    for _ in range(repetitions):
-        gc.disable()
+    # Warm-up runs
+    for _ in range(3):
         test_data = data.copy()
-        accesses, comparisons = algo(test_data)
+        gc.disable()
+        algo(test_data)
         gc.enable()
 
-        total_accesses += accesses
-        total_comparisons += comparisons
+    # Timing runs
+    for _ in range(repetitions):
+        test_data = data.copy()
+        gc.disable()
+        start_time = time.perf_counter()
+        algo(test_data)
+        end_time = time.perf_counter()
+        gc.enable()
 
-    average_accesses = total_accesses // repetitions
-    average_comparisons = total_comparisons // repetitions
-    return algo.__name__, data_type, average_accesses, average_comparisons
+        times.append(end_time - start_time)
+
+    median_time = statistics.median(times)
+    min_time = min(times)
+    max_time = max(times)
+    std_dev = statistics.stdev(times)
+
+    return algo.__name__, data_type, median_time, min_time, max_time, std_dev
 
 
 def benchmark_sorting_algorithms(sorting_algorithms: List[Callable],
@@ -66,11 +53,12 @@ def benchmark_sorting_algorithms(sorting_algorithms: List[Callable],
                                  sizes: List[int],
                                  repetitions: int = 5) -> dict:
     results = {algo.__name__: {
-        'random': {'accesses': [], 'comparisons': []},
-        'sorted': {'accesses': [], 'comparisons': []},
-        'reverse_sorted': {'accesses': [], 'comparisons': []},
-        'many_duplicates': {'accesses': [], 'comparisons': []}
-    } for algo in sorting_algorithms}
+        'random': [],
+        'sorted': [],
+        'reverse_sorted': [],
+        'many_duplicates': []
+    }
+        for algo in sorting_algorithms}
 
     pool = Pool(max(1, cpu_count() - 2))
 
@@ -84,11 +72,11 @@ def benchmark_sorting_algorithms(sorting_algorithms: List[Callable],
         }
 
         tasks = [(algo, datasets[data_type], data_type, repetitions)
-                 for algo in sorting_algorithms for data_type in datasets]
+                 for algo in sorting_algorithms
+                 for data_type in datasets]
 
-        for name, data_type, average_accesses, average_comparisons in pool.map(benchmark_single_algorithm, tasks):
-            results[name][data_type]['accesses'].append(average_accesses)
-            results[name][data_type]['comparisons'].append(average_comparisons)
+        for name, data_type, median_time, min_time, max_time, std_dev in pool.map(benchmark_single_algorithm, tasks):
+            results[name][data_type].append((median_time, min_time, max_time, std_dev))
 
     pool.close()
     pool.join()
@@ -96,127 +84,112 @@ def benchmark_sorting_algorithms(sorting_algorithms: List[Callable],
     return results
 
 
-def calculate_integrals(benchmark_results, data_sizes):
-    integral_results = {}
+def calculate_score(benchmark_results, data_sizes):
+    scores = {}
 
     for algo in benchmark_results:
-        integral_results[algo] = {'accesses': {}, 'comparisons': {}}
+        scores[algo] = {}
         for data_type in benchmark_results[algo]:
-            integral_accesses = simps(benchmark_results[algo][data_type]['accesses'], data_sizes)
-            integral_results[algo]['accesses'][data_type] = integral_accesses
+            median_times = [data[0] for data in benchmark_results[algo][data_type]]
+            score = simps(median_times, data_sizes)
+            scores[algo][data_type] = np.log(score)
 
-            integral_comparisons = simps(benchmark_results[algo][data_type]['comparisons'], data_sizes)
-            integral_results[algo]['comparisons'][data_type] = integral_comparisons
-
-    return integral_results
+    return scores
 
 
-def get_rankings(scores):
-    sorted_scores = sorted(list(set(scores)))
-    rank_dict = {score: idx + 1 for idx, score in enumerate(sorted_scores)}
-    return [rank_dict[score] for score in scores]
-
-
-def display_terminal_results(integral_results: dict) -> None:
-    for data_type in ["random", "sorted", "reverse_sorted", "many_duplicates"]:
-        print(f"\nResults for {data_type.replace('_', ' ').title()} Data:")
-
-        table = PrettyTable()
-        table.field_names = ["Algorithm", "Accesses Score (Log, Rank)", "Comparisons Score (Log, Rank)",
-                             "Combined Score (Log, Rank)"]
-
-        # Gather scores and rankings
-        algorithm_data = []
-        for algo in integral_results:
-            accesses_score = math.log(integral_results[algo]['accesses'][data_type] + 1)  # +1 to avoid log(0)
-            comparisons_score = math.log(integral_results[algo]['comparisons'][data_type] + 1)
-            combined_score = math.log(
-                integral_results[algo]['accesses'][data_type] + integral_results[algo]['comparisons'][data_type] + 1)
-
-            algorithm_data.append((algo, accesses_score, comparisons_score, combined_score))
-
-        # Sort by combined score
-        sorted_algorithm_data = sorted(algorithm_data, key=lambda x: x[3])
-
-        # Calculate rankings
-        accesses_rankings = get_rankings([data[1] for data in sorted_algorithm_data])
-        comparisons_rankings = get_rankings([data[2] for data in sorted_algorithm_data])
-        combined_rankings = get_rankings([data[3] for data in sorted_algorithm_data])
-
-        # Add rows to table
-        for (algo, accesses_score, comparisons_score, combined_score), acc_rank, comp_rank, comb_rank in zip(
-                sorted_algorithm_data, accesses_rankings, comparisons_rankings, combined_rankings):
-            table.add_row([algo, f"{accesses_score:.2f} ({acc_rank})", f"{comparisons_score:.2f} ({comp_rank})",
-                           f"{combined_score:.2f} ({comb_rank})"])
-
-        print(table)
-
-    print("\nAverage Results Across All Data Types:")
-    average_table = PrettyTable()
-    average_table.field_names = ["Algorithm", "Average Accesses (Log)", "Average Comparisons (Log)",
-                                 "Average Combined Score (Log)"]
-
-    algorithm_data = []
-    for algo in integral_results:
-        total_accesses_score, total_comparisons_score, total_combined_score = 0, 0, 0
-        for data_type in ["random", "sorted", "reverse_sorted", "many_duplicates"]:
-            accesses_score = math.log(integral_results[algo]['accesses'][data_type] + 1)
-            comparisons_score = math.log(integral_results[algo]['comparisons'][data_type] + 1)
-
-            total_accesses_score += accesses_score
-            total_comparisons_score += comparisons_score
-
-        avg_accesses_score = total_accesses_score / 4
-        avg_comparisons_score = total_comparisons_score / 4
-        avg_combined_score = (avg_accesses_score + avg_comparisons_score) / 2
-
-        algorithm_data.append((algo, avg_accesses_score, avg_comparisons_score, avg_combined_score))
-
-    sorted_algorithm_data = sorted(algorithm_data, key=lambda x: x[3])
-
-    for algo, avg_accesses_score, avg_comparisons_score, avg_combined_score in sorted_algorithm_data:
-        average_table.add_row(
-            [algo, f"{avg_accesses_score:.2f}", f"{avg_comparisons_score:.2f}", f"{avg_combined_score:.2f}"])
-
-    print(average_table)
-
-
-def visualize_benchmark_results(results: dict, sizes: List[int], integral_results: dict) -> None:
-    def create_total_plot(ax, algo_data, data_type, integral_data):
-        plot_data = []
-        for algo in algo_data:
-            total_operations = np.array(algo_data[algo][data_type]['accesses']) + \
-                               np.array(algo_data[algo][data_type]['comparisons'])
-            integral_score = integral_data[algo]['accesses'][data_type] + integral_data[algo]['comparisons'][data_type]
-            plot_data.append((algo, total_operations, integral_score))
-
-        plot_data.sort(key=lambda x: x[2])
-
-        for algo, total_operations, integral_score in plot_data:
-            ax.plot(sizes, total_operations, label=f"{algo} (Total Score: {math.log(integral_score):.2f})")
-
-        ax.set_title(f'Total Operations by Sorting Algorithms on {data_type.replace("_", " ").title()} Data', size=10)
-        ax.set_xlabel('Data Size', size=10)
-        ax.set_ylabel('Total Operations', size=10)
-        ax.set_xscale('log')
-        ax.grid(True)
-        ax.legend()
-
+def visualize_benchmark_results(results: dict,
+                                sizes: List[int],
+                                scores: dict) -> None:
     fig, axes = plt.subplots(2, 2, figsize=(15, 10))
     axes = axes.flatten()
 
     for idx, data_type in enumerate(['random', 'sorted', 'reverse_sorted', 'many_duplicates']):
-        create_total_plot(axes[idx], results, data_type, integral_results)
+        plot_data = []
+        for algo in results:
+            median_times, *_ = zip(*results[algo][data_type])
+            median_times = np.array(median_times)
+            score = scores[algo][data_type]
+            plot_data.append((algo, median_times, score))
+
+        plot_data.sort(key=lambda x: x[2])  # Sort by score
+
+        for algo, median_times, score in plot_data:
+            axes[idx].plot(sizes, median_times, label=f"{algo} (Score: {score:.2f})")
+
+        axes[idx].set_title(f'Execution Time by Sorting Algorithms on {data_type.replace("_", " ").title()} Data',
+                            size=10)
+        axes[idx].set_xlabel('Data Size', size=10)
+        axes[idx].set_ylabel('Execution Time (seconds)', size=10)
+        # axes[idx].set_xscale('log')
+        # axes[idx].set_yscale('log')
+        axes[idx].grid(True)
+        axes[idx].legend(loc='upper left', prop={'size': 8})
 
     plt.tight_layout()
     plt.show()
 
 
+def print_and_save_results(results: dict, scores: dict) -> None:
+    output_str = ""
+
+    for data_type in ['random', 'sorted', 'reverse_sorted', 'many_duplicates']:
+        table_data = []
+        for algo in results:
+            median_times, min_times, max_times, std_devs = zip(*results[algo][data_type])
+            score = scores[algo][data_type]
+            table_data.append((algo, statistics.median(median_times), min(min_times), max(max_times),
+                               statistics.mean(std_devs), score))
+
+        # Sort by score (6th element in the tuple)
+        table_data.sort(key=lambda x: x[5])
+
+        table = PrettyTable()
+        table.field_names = ["Algorithm", "Median Time", "Min Time", "Max Time", "Average Std Dev", "Integral Score"]
+
+        for row in table_data:
+            adjusted_row = [f"{ele:.6f}" if isinstance(ele, (float, int)) else ele for ele in row]
+            table.add_row(adjusted_row)
+
+        print(f"\nResults for {data_type.replace('_', ' ').title()} Data:")
+        print(table)
+
+        output_str += f"Results for {data_type.replace('_', ' ').title()} Data:\n"
+        output_str += str(table)
+        output_str += "\n\n"
+
+    with open("results.txt", "w") as file:
+        file.write(output_str)
+
+
+def pre_benchmark_check(sorting_algorithms: List[Callable],
+                        test_data_generator: TestData,
+                        test_size: int = 1000,
+                        repetitions: int = 5) -> bool:
+    for _ in range(repetitions):
+        test_data = test_data_generator.random_data(test_size)
+        expected_result = sorted(test_data)
+
+        for algo in sorting_algorithms:
+            if algo.__name__ in ['my_sort_not_in_place', 'merge_sort']:
+                if algo(test_data.copy()) != expected_result:
+                    print(f"Algorithm {algo.__name__} failed the pre-benchmark check.")
+                    return False
+            else:
+                data_copy = test_data.copy()
+                algo(data_copy)
+                if data_copy != expected_result:
+                    print(f"Algorithm {algo.__name__} failed the pre-benchmark check.")
+                    return False
+
+    print("All algorithms passed the pre-benchmark check.")
+    return True
+
+
 def main():
     # Adjustable parameters
-    MIN_DATA_SIZE = 1000
-    MAX_DATA_SIZE = 100_000
-    NUM_DATA_POINTS = 25
+    min_data_size = 0
+    max_data_size = 5
+    num_data_points = (max_data_size - min_data_size) * 20 + 1
 
     # List of sorting algorithms to benchmark
     sorting_algorithms = [merge_sort,
@@ -226,22 +199,27 @@ def main():
                           my_sort_in_place]
 
     # Generating data sizes for benchmarking
-    data_sizes = list(range(MIN_DATA_SIZE, MAX_DATA_SIZE + 1, MAX_DATA_SIZE // NUM_DATA_POINTS))
+    data_sizes = sorted(set(np.logspace(min_data_size, max_data_size, num_data_points, dtype=int)))
 
     # Creating a TestData instance
     test_data_generator = TestData()
 
+    # Pre-benchmark check
+    if not pre_benchmark_check(sorting_algorithms, test_data_generator):
+        print("Pre-benchmark check failed. Please check the sorting algorithms.")
+        return
+
     # Running the benchmark
     benchmark_results = benchmark_sorting_algorithms(sorting_algorithms, test_data_generator, data_sizes)
 
-    # Calculating integrals
-    integral_results = calculate_integrals(benchmark_results, data_sizes)
+    # Calculating scores
+    scores = calculate_score(benchmark_results, data_sizes)
 
-    # Displaying results in the terminal
-    display_terminal_results(integral_results)
+    # Get raw results
+    print_and_save_results(benchmark_results, scores)
 
     # Visualise total operations
-    visualize_benchmark_results(benchmark_results, data_sizes, integral_results)
+    visualize_benchmark_results(benchmark_results, data_sizes, scores)
 
 
 if __name__ == "__main__":
