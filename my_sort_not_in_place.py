@@ -1,5 +1,5 @@
 def my_sort_not_in_place(arr):
-    if not arr:
+    if len(arr) <= 1:
         return arr
     return my_sort_not_in_place_util(arr, min(arr), max(arr))
 

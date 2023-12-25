@@ -188,7 +188,7 @@ def pre_benchmark_check(sorting_algorithms: List[Callable],
 def main():
     # Adjustable parameters
     min_data_size = 0
-    max_data_size = 5
+    max_data_size = 6
     num_data_points = (max_data_size - min_data_size) * 20 + 1
 
     # List of sorting algorithms to benchmark
