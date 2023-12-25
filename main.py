@@ -129,7 +129,9 @@ def visualize_benchmark_results(results: dict,
     plt.show()
 
 
-def print_and_save_results(results: dict, scores: dict) -> None:
+def print_and_save_results(results: dict,
+                           scores: dict,
+                           is_save: bool = False) -> None:
     output_str = ""
 
     for data_type in ['random', 'sorted', 'reverse_sorted', 'many_duplicates']:
@@ -157,8 +159,9 @@ def print_and_save_results(results: dict, scores: dict) -> None:
         output_str += str(table)
         output_str += "\n\n"
 
-    with open("results.txt", "w") as file:
-        file.write(output_str)
+    if is_save:
+        with open("results.txt", "w") as file:
+            file.write(output_str)
 
 
 def pre_benchmark_check(sorting_algorithms: List[Callable],
