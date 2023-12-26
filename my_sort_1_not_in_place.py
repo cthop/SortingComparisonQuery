@@ -1,10 +1,10 @@
-def my_sort_not_in_place(arr):
+def my_sort_1_not_in_place(arr):
     if len(arr) <= 1:
         return arr
-    return my_sort_not_in_place_util(arr, min(arr), max(arr))
+    return my_sort_1_not_in_place_util(arr, min(arr), max(arr))
 
 
-def my_sort_not_in_place_util(arr, minimum, maximum):
+def my_sort_1_not_in_place_util(arr, minimum, maximum):
     if len(arr) <= 1:
         return arr
 
@@ -15,7 +15,7 @@ def my_sort_not_in_place_util(arr, minimum, maximum):
 
     left, right = [], []
     left_maximum, right_minimum = minimum, maximum
-    for ele in arr:
+    for i, ele in enumerate(arr):
         if ele <= mid:
             if ele > left_maximum:
                 left_maximum = ele
@@ -25,7 +25,7 @@ def my_sort_not_in_place_util(arr, minimum, maximum):
                 right_minimum = ele
             right.append(ele)
 
-    sorted_left = my_sort_not_in_place_util(left, minimum, left_maximum)
-    sorted_right = my_sort_not_in_place_util(right, right_minimum, maximum)
+    sorted_left = my_sort_1_not_in_place_util(left, minimum, left_maximum)
+    sorted_right = my_sort_1_not_in_place_util(right, right_minimum, maximum)
 
     return sorted_left + sorted_right

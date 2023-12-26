@@ -1,10 +1,10 @@
-def my_sort_in_place(arr):
+def my_sort_1_in_place(arr):
     if len(arr) <= 1:
         return
-    my_sort_in_place_util(arr, 0, len(arr) - 1, min(arr), max(arr))
+    my_sort_1_in_place_util(arr, 0, len(arr) - 1, min(arr), max(arr))
 
 
-def my_sort_in_place_util(arr, left, right, minimum, maximum):
+def my_sort_1_in_place_util(arr, left, right, minimum, maximum):
     if left >= right:
         return
 
@@ -26,5 +26,5 @@ def my_sort_in_place_util(arr, left, right, minimum, maximum):
             arr[i], arr[j] = arr[j], arr[i]
             j -= 1
 
-    my_sort_in_place_util(arr, left, i - 1, minimum, left_maximum)
-    my_sort_in_place_util(arr, i, right, right_minimum, maximum)
+    my_sort_1_in_place_util(arr, left, i - 1, minimum, left_maximum)
+    my_sort_1_in_place_util(arr, i, right, right_minimum, maximum)

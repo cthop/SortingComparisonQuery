@@ -1,14 +1,15 @@
-def quick_sort(arr):
-    if len(arr) <= 1:
-        return
-    quick_sort_helper(arr, 0, len(arr) - 1)
+def quick_sort(arr, max_depth=100):
+    quick_sort_helper(arr, 0, len(arr) - 1, 0, max_depth)
 
 
-def quick_sort_helper(arr, low, high):
+def quick_sort_helper(arr, low, high, depth, max_depth):
     if low < high:
-        pi = partition(arr, low, high)
-        quick_sort_helper(arr, low, pi - 1)
-        quick_sort_helper(arr, pi + 1, high)
+        if depth > max_depth:
+            insertion_sort(arr, low, high)
+        else:
+            pi = partition(arr, low, high)
+            quick_sort_helper(arr, low, pi - 1, depth + 1, max_depth)
+            quick_sort_helper(arr, pi + 1, high, depth + 1, max_depth)
 
 
 def partition(arr, low, high):
@@ -23,3 +24,13 @@ def partition(arr, low, high):
             arr[i], arr[j] = arr[j], arr[i]
     arr[i + 1], arr[high] = arr[high], arr[i + 1]
     return i + 1
+
+
+def insertion_sort(arr, low, high):
+    for i in range(low + 1, high + 1):
+        key = arr[i]
+        j = i - 1
+        while j >= low and key < arr[j]:
+            arr[j + 1] = arr[j]
+            j -= 1
+        arr[j + 1] = key
